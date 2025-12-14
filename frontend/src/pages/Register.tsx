@@ -1,88 +1,117 @@
 import React, { useState } from 'react';
-import { Container, TextField, Button, Typography, Box, Paper } from '@mui/material';
+import { Form, Input, Button, Card, Typography, Space, message } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import type { UserCreate } from '../types/models';
 
+const { Title } = Typography;
+
 const Register: React.FC = () => {
-  const [userData, setUserData] = useState<UserCreate>({ email: '', full_name: '', password: '' });
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUserData({ ...userData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFinish = async (values: UserCreate) => {
+    setLoading(true);
     try {
-      await register(userData);
+      await register(values);
+      message.success('Registration successful!');
       navigate('/login');
     } catch (error) {
       // Error handled in context
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
-      <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Register
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    }}>
+      <Card 
+        style={{ 
+          width: 400, 
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          borderRadius: '12px'
+        }}
+        hoverable
+      >
+        <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
+          <Title level={2} style={{ margin: 0, color: '#1890ff' }}>Register</Title>
+          <Form
+            name="register"
+            onFinish={onFinish}
+            autoComplete="off"
+            layout="vertical"
+          >
+            <Form.Item
               name="email"
-              autoComplete="email"
-              autoFocus
-              value={userData.email}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="full_name"
-              label="Full Name"
-              name="full_name"
-              autoComplete="name"
-              value={userData.full_name}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="new-password"
-              value={userData.password}
-              onChange={handleChange}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              rules={[{ required: true, message: 'Please input your email!' }, { type: 'email', message: 'Please enter a valid email!' }]}
             >
-              Sign Up
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link to="/login" style={{ textDecoration: 'none' }}>
-                Already have an account? Sign In
-              </Link>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+              <Input 
+                prefix={<MailOutlined />} 
+                placeholder="Email Address" 
+                size="large"
+                style={{ borderRadius: '8px' }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="full_name"
+              rules={[{ required: true, message: 'Please input your full name!' }]}
+            >
+              <Input 
+                prefix={<UserOutlined />} 
+                placeholder="Full Name" 
+                size="large"
+                style={{ borderRadius: '8px' }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: 'Please input your password!' }, { min: 6, message: 'Password must be at least 6 characters!' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="Password"
+                size="large"
+                style={{ borderRadius: '8px' }}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={loading}
+                size="large"
+                block
+                style={{ 
+                  borderRadius: '8px',
+                  height: '48px',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Sign Up
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div>
+            <Link to="/login" style={{ color: '#1890ff', textDecoration: 'none' }}>
+              Already have an account? Sign In
+            </Link>
+          </div>
+        </Space>
+      </Card>
+    </div>
   );
 };
 
