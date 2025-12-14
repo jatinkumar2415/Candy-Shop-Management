@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Button, Chip, Card, CardContent, TextField } from '@mui/material';
-import { ShoppingCart, Edit } from '@mui/icons-material';
+import { Card, Typography, Button, Tag, InputNumber, Space, Descriptions, Image, Spin, message } from 'antd';
+import { ShoppingCartOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { Sweet } from '../types/models';
 import api from '../api/api';
-import { toast } from 'react-toastify';
+
+const { Title, Text } = Typography;
 
 const SweetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [sweet, setSweet] = useState<Sweet | null>(null);
+  const [loading, setLoading] = useState(true);
   const [purchaseQuantity, setPurchaseQuantity] = useState(1);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [restockLoading, setRestockLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -25,96 +29,175 @@ const SweetDetail: React.FC = () => {
       const response = await api.get(`/sweets/${id}`);
       setSweet(response.data);
     } catch (error: any) {
-      toast.error('Failed to fetch sweet');
+      message.error('Failed to fetch sweet');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handlePurchase = async () => {
     if (!sweet) return;
+    setPurchaseLoading(true);
     try {
       await api.post(`/sweets/${sweet.id}/purchase`, { quantity: purchaseQuantity });
-      toast.success('Purchase successful!');
+      message.success('Purchase successful!');
       fetchSweet();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Purchase failed');
+      message.error(error.response?.data?.detail || 'Purchase failed');
+    } finally {
+      setPurchaseLoading(false);
     }
   };
 
   const handleRestock = async () => {
     if (!sweet) return;
+    setRestockLoading(true);
     try {
       await api.post(`/sweets/${sweet.id}/restock`);
-      toast.success('Restock successful!');
+      message.success('Restock successful!');
       fetchSweet();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Restock failed');
+      message.error(error.response?.data?.detail || 'Restock failed');
+    } finally {
+      setRestockLoading(false);
     }
   };
 
-  if (!sweet) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!sweet) return <div>Sweet not found</div>;
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Card>
-        <CardContent>
-          <Typography variant="h4" gutterBottom>
-            {sweet.name}
-          </Typography>
-          <Chip label={sweet.category} sx={{ mb: 2 }} />
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {sweet.description}
-          </Typography>
-          <Typography variant="h5" sx={{ mb: 1 }}>
-            Price: ${sweet.price}
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Quantity: {sweet.quantity}
-          </Typography>
-          {sweet.image_url && (
-            <Box sx={{ mb: 2 }}>
-              <img src={sweet.image_url} alt={sweet.name} style={{ maxWidth: '100%', height: 'auto' }} />
-            </Box>
-          )}
-          <Typography variant="body2" color="text.secondary">
-            Created: {new Date(sweet.created_at).toLocaleDateString()}
-          </Typography>
-          {sweet.updated_at && (
-            <Typography variant="body2" color="text.secondary">
-              Updated: {new Date(sweet.updated_at).toLocaleDateString()}
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-
-      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <TextField
-          label="Quantity"
-          type="number"
-          value={purchaseQuantity}
-          onChange={(e) => setPurchaseQuantity(Number(e.target.value))}
-          inputProps={{ min: 1, max: sweet.quantity }}
-          sx={{ width: 100 }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<ShoppingCart />}
-          onClick={handlePurchase}
-          disabled={sweet.quantity === 0 || purchaseQuantity < 1 || purchaseQuantity > sweet.quantity}
+    <div style={{ 
+      minHeight: '100vh', 
+      padding: '24px',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+    }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <Card 
+          style={{ 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            borderRadius: '12px'
+          }}
+          hoverable
         >
-          Purchase
-        </Button>
-        {user?.is_admin && (
-          <>
-            <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate(`/sweets/${id}/edit`)}>
-              Edit
-            </Button>
-            <Button variant="outlined" onClick={handleRestock}>
-              Restock
-            </Button>
-          </>
-        )}
-      </Box>
-    </Container>
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <div style={{ textAlign: 'center' }}>
+              <Title level={1} style={{ margin: 0, color: '#1890ff' }}>{sweet.name}</Title>
+              <Tag color="blue" style={{ fontSize: '14px', padding: '4px 12px' }}>{sweet.category}</Tag>
+            </div>
+
+            {sweet.image_url && (
+              <div style={{ textAlign: 'center' }}>
+                <Image
+                  src={sweet.image_url}
+                  alt={sweet.name}
+                  style={{ 
+                    maxWidth: '300px', 
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                  preview={false}
+                />
+              </div>
+            )}
+
+            <Descriptions 
+              bordered 
+              column={1}
+              size="middle"
+              style={{ background: 'white', borderRadius: '8px' }}
+            >
+              <Descriptions.Item label="Description">
+                <Text style={{ fontSize: '16px' }}>{sweet.description}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Price">
+                <Text strong style={{ fontSize: '18px', color: '#52c41a' }}>Rs {sweet.price}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Available Quantity">
+                <Text style={{ fontSize: '16px', color: sweet.quantity > 0 ? '#1890ff' : '#ff4d4f' }}>
+                  {sweet.quantity}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Created">
+                <Text>{new Date(sweet.created_at).toLocaleDateString()}</Text>
+              </Descriptions.Item>
+              {sweet.updated_at && (
+                <Descriptions.Item label="Last Updated">
+                  <Text>{new Date(sweet.updated_at).toLocaleDateString()}</Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            <Card 
+              size="small" 
+              style={{ 
+                background: '#f6ffed', 
+                border: '1px solid #b7eb8f',
+                borderRadius: '8px'
+              }}
+            >
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Text strong>Purchase Options</Text>
+                <Space>
+                  <Text>Quantity:</Text>
+                  <InputNumber
+                    min={1}
+                    max={sweet.quantity}
+                    value={purchaseQuantity}
+                    onChange={(value) => setPurchaseQuantity(value || 1)}
+                    style={{ width: '80px' }}
+                  />
+                </Space>
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<ShoppingCartOutlined />}
+                    onClick={handlePurchase}
+                    loading={purchaseLoading}
+                    disabled={sweet.quantity === 0 || purchaseQuantity < 1 || purchaseQuantity > sweet.quantity}
+                    size="large"
+                    style={{ 
+                      borderRadius: '8px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Purchase
+                  </Button>
+                  {user?.is_admin && (
+                    <>
+                      <Button
+                        icon={<EditOutlined />}
+                        onClick={() => navigate(`/sweets/${id}/edit`)}
+                        size="large"
+                        style={{ borderRadius: '8px' }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={handleRestock}
+                        loading={restockLoading}
+                        size="large"
+                        style={{ borderRadius: '8px' }}
+                      >
+                        Restock
+                      </Button>
+                    </>
+                  )}
+                </Space>
+              </Space>
+            </Card>
+          </Space>
+        </Card>
+      </div>
+    </div>
   );
 };
 
